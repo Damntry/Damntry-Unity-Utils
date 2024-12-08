@@ -371,3 +371,4 @@ FodyWeavers.xsd
 /lib/UnityEngine.InputLegacyModule.dll
 /lib/UnityEngine.UI.dll
 /lib/UnityEngine.UIModule.dll
+/lib/UniTask.dll
