@@ -1,6 +1,5 @@
-﻿using UnityEngine;
-using Damntry.Utils.Timers.StopwatchImpl;
-
+﻿using Damntry.Utils.Timers.StopwatchImpl;
+using UnityEngine;
 
 namespace Damntry.UtilsUnity.Timers {
 
@@ -9,11 +8,21 @@ namespace Damntry.UtilsUnity.Timers {
 	/// </summary>
 	public class UnityTimeStopwatch : IStopwatch {
 
+
+		public enum TimeType {
+			Time,
+			FixedTime,
+			UnscaledTime,
+			UnscaledFixedTime
+		}
+
 		private double elapsed;
 
 		private double startTimeStamp;
 
 		private bool isRunning;
+
+		private TimeType timeType;
 
 
 		/// <summary>Gets a value indicating whether this UnityTimeStopwatch timer is running.</summary>
@@ -27,7 +36,7 @@ namespace Damntry.UtilsUnity.Timers {
 		/// <summary>Gets the total elapsed time measured by the current instance, in milliseconds.</summary>
 		public long ElapsedMilliseconds {
 			get {
-				return (long)GetElapsedSeconds(false) / 10000;
+				return (long)GetElapsedSeconds(false) * 1000;
 			}
 		}
 
@@ -41,7 +50,7 @@ namespace Damntry.UtilsUnity.Timers {
 		/// <summary>Gets the total elapsed time measured by the current instance, in milliseconds.</summary>
 		public double ElapsedMillisecondsPrecise {
 			get {
-				return GetElapsedSeconds(true) / 10000;
+				return GetElapsedSeconds(true) * 1000;
 			}
 		}
 
@@ -57,6 +66,12 @@ namespace Damntry.UtilsUnity.Timers {
 
 		/// <summary>Initializes a new instance of this class.</summary>
 		public UnityTimeStopwatch() {
+			this.timeType = TimeType.Time;
+			Reset();
+		}
+
+		public UnityTimeStopwatch(TimeType timeType) {
+			this.timeType = timeType;
 			Reset();
 		}
 
@@ -71,6 +86,12 @@ namespace Damntry.UtilsUnity.Timers {
 		/// <summary>A UnityTimeStopwatch that has just begun measuring elapsed time.</summary>
 		public static UnityTimeStopwatch StartNew() {
 			UnityTimeStopwatch unityTimeStopwatch = new UnityTimeStopwatch();
+			unityTimeStopwatch.Start();
+			return unityTimeStopwatch;
+		}
+
+		public static UnityTimeStopwatch StartNew(TimeType timeType) {
+			UnityTimeStopwatch unityTimeStopwatch = new UnityTimeStopwatch(timeType);
 			unityTimeStopwatch.Start();
 			return unityTimeStopwatch;
 		}
@@ -94,6 +115,7 @@ namespace Damntry.UtilsUnity.Timers {
 			startTimeStamp = 0L;
 		}
 
+
 		/// <summary>Stops time interval measurement, resets the elapsed time to zero, and starts measuring elapsed time.</summary>
 		public void Restart() {
 			elapsed = 0L;
@@ -101,13 +123,21 @@ namespace Damntry.UtilsUnity.Timers {
 			isRunning = true;
 		}
 
-		private float GetTimestamp() {
-			return Time.time;
-		}
+		private float GetTimestamp() => timeType switch {
+				TimeType.Time => Time.time,
+				TimeType.FixedTime => Time.fixedTime,
+				TimeType.UnscaledTime => Time.unscaledTime,
+				TimeType.UnscaledFixedTime => Time.fixedUnscaledTime,
+				_ => throw new System.NotImplementedException()
+			};
 
-		private double GetTimestampDouble() {
-			return Time.timeAsDouble;
-		}
+		private double GetTimestampDouble() => timeType switch {
+			TimeType.Time => Time.timeAsDouble,
+			TimeType.FixedTime => Time.fixedTimeAsDouble,
+			TimeType.UnscaledTime => Time.unscaledTimeAsDouble,
+			TimeType.UnscaledFixedTime => Time.fixedUnscaledTimeAsDouble,
+			_ => throw new System.NotImplementedException()
+		};
 
 		private double GetElapsedSeconds(bool highPrecision) {
 			double num = elapsed;
