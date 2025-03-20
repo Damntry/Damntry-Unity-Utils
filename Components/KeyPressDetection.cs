@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Damntry.Utils.ExtensionMethods;
+using Damntry.Utils.Logging;
 using UnityEngine;
 
 namespace Damntry.UtilsUnity.Components {
@@ -121,9 +122,10 @@ namespace Damntry.UtilsUnity.Components {
 		}
 
 		public static void RemoveHotkey(KeyCode keyCode) {
-			keyPressActions.Remove(keyCode);
-
-			instance?.BehaviourEnabledCheck();
+			if (keyPressActions.ContainsKey(keyCode)) {
+				keyPressActions.Remove(keyCode);
+				instance?.BehaviourEnabledCheck();
+			}
 		}
 
 		private void BehaviourEnabledCheck() {
