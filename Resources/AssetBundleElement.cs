@@ -11,9 +11,12 @@ namespace Damntry.UtilsUnity.Resources {
 	/// </summary>
 	public class AssetBundleElement {
 
-		private readonly string assetPath;
+		private readonly string assetBundlePath;
 
-		private Dictionary<string, GameObject> loadedPrefabs;
+		private AssetBundle loadedBundle;
+
+		private readonly Dictionary<string, GameObject> loadedPrefabs;
+
 
 
 		public AssetBundleElement(Type assemblyType, string assetName) {
@@ -24,9 +27,9 @@ namespace Damntry.UtilsUnity.Resources {
 				throw new ArgumentNullException($"The parameter {assetName} cant be null or empty.");
 			}
 
-			assetPath = AssemblyUtils.GetCombinedPathFromAssemblyFolder(assemblyType, assetName);
-			if (!File.Exists(assetPath)) {
-				throw new FileNotFoundException(null, assetPath);
+			assetBundlePath = AssemblyUtils.GetCombinedPathFromAssemblyFolder(assemblyType, assetName);
+			if (!File.Exists(assetBundlePath)) {
+				throw new FileNotFoundException(null, assetBundlePath);
 			}
 
 			loadedPrefabs = new();
@@ -40,12 +43,14 @@ namespace Damntry.UtilsUnity.Resources {
 		private bool TryLoadPrefabObject(string prefabName, out GameObject prefabObj) {
 			prefabObj = null;
 
-			AssetBundle _bundle = AssetBundle.LoadFromFile(assetPath);
-			if (_bundle == null) {
-				return false;
+			if (loadedBundle == null) {
+				loadedBundle = AssetBundle.LoadFromFile(assetBundlePath);
+				if (loadedBundle == null) {
+					return false;
+				}
 			}
-			
-			prefabObj = _bundle.LoadAsset<GameObject>($"assets/{prefabName}.prefab");
+
+			prefabObj = loadedBundle.LoadAsset<GameObject>($"assets/{prefabName}.prefab");
 			if (prefabObj == null) {
 				return false;
 			}
@@ -56,16 +61,15 @@ namespace Damntry.UtilsUnity.Resources {
 
 		public bool TryLoadNewInstance(string prefabName, out GameObject prefabInstance) {
 			prefabInstance = null;
-			bool found = loadedPrefabs.TryGetValue(prefabName, out GameObject prefabObj);
-			if (!found) {
-				//If not found, load it from disk.
-				found = TryLoadPrefabObject(prefabName, out prefabObj);
-			}
-			if (found) {
-				prefabInstance = UnityEngine.Object.Instantiate(prefabObj);
+			if (!loadedPrefabs.TryGetValue(prefabName, out GameObject prefabObj)) {
+				//If not found, load it from bundle file.
+				if (!TryLoadPrefabObject(prefabName, out prefabObj)) {
+					return false;
+				}
 			}
 
-			return found;
+			prefabInstance = UnityEngine.Object.Instantiate(prefabObj);
+			return true;
 		}
 	}
 }
