@@ -13,6 +13,6 @@ using System.Reflection;
 <#+
     string ProductName = "Damntry Globals unity";
 	string Description = "Utils for projects using Unity";
-	string Version = "0.1.1";
+	string Version = "0.1.3";
 	string AuthorName = "Damntry";
 #>

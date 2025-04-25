@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Damntry.Utils.ExtensionMethods;
-using Damntry.Utils.Logging;
 using UnityEngine;
 
 namespace Damntry.UtilsUnity.Components {
@@ -26,7 +25,7 @@ namespace Damntry.UtilsUnity.Components {
 		/// <summary>
 		/// Minimum cooldown time between keypresses when not specified for the hotkey.
 		/// </summary>
-		private const int DefaultKeyPressCooldown = 50;
+		private const int DefaultKeyPressCooldown = 65;
 
 		
 		static KeyPressDetection() {
@@ -104,21 +103,39 @@ namespace Damntry.UtilsUnity.Components {
 			KeyPressDetection.preKeyCheckFunc = preKeyCheckFunc;
 		}
 
+
+		public static bool TryAddHotkey(KeyCode keyCode, Action action) {
+			return AddHotkeyInternal(keyCode, DefaultKeyPressCooldown, throwIfExists: false, action);
+		}
+
+		public static bool TryAddHotkey(KeyCode keyCode, int cooldownMillis, Action action) {
+			return AddHotkeyInternal(keyCode, cooldownMillis, throwIfExists: false, action);
+		}
+
 		public static void AddHotkey(KeyCode keyCode, Action action) {
-			AddHotkey(keyCode, DefaultKeyPressCooldown, action);
+			AddHotkeyInternal(keyCode, DefaultKeyPressCooldown, throwIfExists: true, action);
 		}
 
 		public static void AddHotkey(KeyCode keyCode, int cooldownMillis, Action action) {
+			AddHotkeyInternal(keyCode, cooldownMillis, throwIfExists: true, action);
+		}
+
+		private static bool AddHotkeyInternal(KeyCode keyCode, int cooldownMillis, bool throwIfExists, Action action) {
 			if (action == null) {
 				throw new ArgumentNullException(nameof(action));
 			}
 			if (keyPressActions.ContainsKey(keyCode)) {
-				throw new InvalidOperationException($"Hotkey {keyCode} is already defined.");
+				if (throwIfExists) {
+					throw new InvalidOperationException($"Hotkey {keyCode} is already defined.");
+				}
+				return false;
 			}
 
 			keyPressActions.Add(keyCode, new KeyPressData(action, cooldownMillis));
 
 			instance?.BehaviourEnabledCheck();
+
+			return true;
 		}
 
 		public static void RemoveHotkey(KeyCode keyCode) {
