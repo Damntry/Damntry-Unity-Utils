@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using Damntry.Utils.Logging;
 using Damntry.Utils.Reflection;
 using UnityEngine;
 
@@ -15,8 +16,7 @@ namespace Damntry.UtilsUnity.Resources {
 
 		private AssetBundle loadedBundle;
 
-		private readonly Dictionary<string, GameObject> loadedPrefabs;
-
+		private readonly Dictionary<string, UnityEngine.Object> loadedPrefabs;
 
 
 		public AssetBundleElement(Type assemblyType, string assetName) {
@@ -36,40 +36,76 @@ namespace Damntry.UtilsUnity.Resources {
 		}
 
 		/// <summary>
-		/// Loads a prefab object for later use.
+		/// Load the bundle from the constructor given path. Useful when you want
+		/// to load it earlier so when instanced it avoids the loading cost.
 		/// </summary>
-		/// <param name="prefabName">Name of the prefab object, without .prefab extension.</param>
-		/// <returns>True if the object was loaded successfully.</returns>
-		private bool TryLoadPrefabObject(string prefabName, out GameObject prefabObj) {
-			prefabObj = null;
-
+		/// <returns>True if it loaded successfully, or was previously already loaded. False otherwise.</returns>
+		public bool PreloadBundle() {
 			if (loadedBundle == null) {
 				loadedBundle = AssetBundle.LoadFromFile(assetBundlePath);
 				if (loadedBundle == null) {
+					TimeLogger.Logger.LogTimeError($"Failed to load bundle from {assetBundlePath}", LogCategories.Other);
 					return false;
 				}
 			}
+			return true;
+		}
 
-			prefabObj = loadedBundle.LoadAsset<GameObject>($"assets/{prefabName}.prefab");
-			if (prefabObj == null) {
+		/// <summary>
+		/// Loads a prefab object for later use.
+		/// </summary>
+		/// <param name="fullLoadPath">Path to the object within the .</returns>
+		private bool TryLoadPrefabObject<T>(string fullLoadPath, out T loadedObject, bool cacheObject)
+				where T : UnityEngine.Object {
+
+			loadedObject = default;
+
+			if (!PreloadBundle()) {
 				return false;
 			}
-			loadedPrefabs.Add(prefabName, prefabObj);
+
+			loadedObject = loadedBundle.LoadAsset<T>(fullLoadPath);
+			if (loadedObject == null) {
+				return false;
+			}
+
+			if (cacheObject) {
+				loadedPrefabs.Add(fullLoadPath, loadedObject);
+			}
 
 			return true;
 		}
 
-		public bool TryLoadNewInstance(string prefabName, out GameObject prefabInstance) {
+		public bool TryLoadNewPrefabInstance(string prefabName, out GameObject prefabInstance, bool cacheObject = true) {
 			prefabInstance = null;
-			if (!loadedPrefabs.TryGetValue(prefabName, out GameObject prefabObj)) {
-				//If not found, load it from bundle file.
-				if (!TryLoadPrefabObject(prefabName, out prefabObj)) {
-					return false;
-				}
+			string fullLoadPath = $"assets/{prefabName}.prefab";
+
+			if (!TryLoadObject(fullLoadPath, out GameObject prefabObj)) {
+				return false;
 			}
 
 			prefabInstance = UnityEngine.Object.Instantiate(prefabObj);
 			return true;
 		}
+
+		public bool TryLoadObject<T>(string loadPath, out T objectInstance, bool cacheObject = true)
+				where T : UnityEngine.Object {
+
+			objectInstance = default;
+			if (!loadedPrefabs.TryGetValue(loadPath, out UnityEngine.Object unityObject)) {
+				//If not found, load it from bundle file.
+				if (!TryLoadPrefabObject(loadPath, out unityObject, cacheObject)) {
+					return false;
+				}
+			}
+			if (unityObject is not T) {
+				TimeLogger.Logger.LogTimeError($"The object at {loadPath} is not a {typeof(T).Name} type.", 
+					LogCategories.Other);
+			}
+
+			objectInstance = (T)unityObject;
+			return true;
+		}
+
 	}
 }
