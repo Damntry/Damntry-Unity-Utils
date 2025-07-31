@@ -1,10 +1,22 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
+using System.Globalization;
 using System.Threading.Tasks;
 using Damntry.Utils.ExtensionMethods;
+using Damntry.Utils.Logging;
 using UnityEngine;
 
 namespace Damntry.UtilsUnity.Components {
+
+	public enum KeyPressAction {
+		/// <summary>Triggers when the key is pressed for the first time.</summary>
+		KeyDown = 0,
+		/// <summary>Triggers when the key is released.</summary>
+		KeyUp = 1,
+		/// <summary>Triggers constantly while the key is pressed.</summary>
+		KeyHeld = 2,
+	}
 
 	public class KeyPressDetection : MonoBehaviour {
 
@@ -18,9 +30,6 @@ namespace Damntry.UtilsUnity.Components {
 
 		//TODO Global 4 - Add a mode in which while the key is being held, 
 		//	the cooldown gets progressively smaller up to a certain limit.
-
-		//TODO Global 3 - Add a mode of normal behaviour where its just a single click
-		//		without repetition. Basically dont allow more until after keyup is detected.
 
 		/// <summary>
 		/// Minimum cooldown time between keypresses when not specified for the hotkey.
@@ -47,8 +56,16 @@ namespace Damntry.UtilsUnity.Components {
 			}
 
 			foreach (var keyAction in keyPressActions) {
-				if (Input.GetKey(keyAction.Key) && (preKeyCheckFunc == null || preKeyCheckFunc())) {
-					KeyPressData keyPressData = keyAction.Value;
+				KeyPressData keyPressData = keyAction.Value;
+
+				bool isBindedKeyTriggered = keyPressData.KeyAction switch {
+					KeyPressAction.KeyDown => Input.GetKeyDown(keyAction.Key),
+					KeyPressAction.KeyUp => Input.GetKeyUp(keyAction.Key),
+					KeyPressAction.KeyHeld => Input.GetKey(keyAction.Key),
+					_ => throw new NotImplementedException(keyPressData.KeyAction.GetDescription()),
+				};
+
+				if (isBindedKeyTriggered && (preKeyCheckFunc == null || preKeyCheckFunc())) {
 					if (keyPressData.IsNotInCooldown()) {
 						keyPressData.UpdateKeyPressTime();
 						keyPressData.Action();
@@ -104,34 +121,48 @@ namespace Damntry.UtilsUnity.Components {
 		}
 
 
-		public static bool TryAddHotkey(KeyCode keyCode, Action action) {
-			return AddHotkeyInternal(keyCode, DefaultKeyPressCooldown, throwIfExists: false, action);
+		public static bool TryAddHotkey(KeyCode keyCode, KeyPressAction keyAction, Action action) {
+			return AddHotkeyInternal(keyCode, DefaultKeyPressCooldown, keyAction, throwIfExists: false, action);
 		}
 
-		public static bool TryAddHotkey(KeyCode keyCode, int cooldownMillis, Action action) {
-			return AddHotkeyInternal(keyCode, cooldownMillis, throwIfExists: false, action);
+		public static bool TryAddHotkey(KeyCode keyCode, KeyPressAction keyAction, int cooldownMillis, Action action) {
+			return AddHotkeyInternal(keyCode, cooldownMillis, keyAction, throwIfExists: false, action);
 		}
 
-		public static void AddHotkey(KeyCode keyCode, Action action) {
-			AddHotkeyInternal(keyCode, DefaultKeyPressCooldown, throwIfExists: true, action);
+		public static void AddHotkey(KeyCode keyCode, KeyPressAction keyAction, Action action) {
+			AddHotkeyInternal(keyCode, DefaultKeyPressCooldown, keyAction, throwIfExists: true, action);
 		}
 
-		public static void AddHotkey(KeyCode keyCode, int cooldownMillis, Action action) {
-			AddHotkeyInternal(keyCode, cooldownMillis, throwIfExists: true, action);
+		public static void AddHotkey(KeyCode keyCode, KeyPressAction keyAction, int cooldownMillis, Action action) {
+			AddHotkeyInternal(keyCode, cooldownMillis, keyAction, throwIfExists: true, action);
 		}
 
-		private static bool AddHotkeyInternal(KeyCode keyCode, int cooldownMillis, bool throwIfExists, Action action) {
+		private static bool AddHotkeyInternal(KeyCode keyCode, int cooldownMillis,
+				KeyPressAction keyAction, bool throwIfExists, Action action) {
+
 			if (action == null) {
 				throw new ArgumentNullException(nameof(action));
 			}
-			if (keyPressActions.ContainsKey(keyCode)) {
-				if (throwIfExists) {
-					throw new InvalidOperationException($"Hotkey {keyCode} is already defined.");
-				}
-				return false;
-			}
+			if (!keyPressActions.TryGetValue(keyCode, out KeyPressData existingKeyData)) {
+				keyPressActions.Add(keyCode, new KeyPressData(action, keyAction, cooldownMillis));
+			} else { 
+				if (keyAction != existingKeyData.KeyAction &&
+						//KeyDown and KeyHeld are not allowed to be registered at the same time.
+						(keyAction == KeyPressAction.KeyUp || existingKeyData.KeyAction == KeyPressAction.KeyUp)) {
 
-			keyPressActions.Add(keyCode, new KeyPressData(action, cooldownMillis));
+					//TODO 0 - Here I need to somehow add the indication that another KeyAction is being registered
+					keyPressActions.Add(keyCode, new KeyPressData(action, keyAction, cooldownMillis));
+				} else {
+					string errorMessage = $"Hotkey {keyCode} is already defined.";
+					if (throwIfExists) {
+						throw new InvalidOperationException(errorMessage);
+					}
+					else {
+						TimeLogger.Logger.LogTimeError(errorMessage, LogCategories.KeyMouse);
+					}
+					return false;
+				}
+			}
 
 			instance?.BehaviourEnabledCheck();
 
@@ -145,6 +176,9 @@ namespace Damntry.UtilsUnity.Components {
 			}
 		}
 
+		public static string GetRegisteredHotkeys() => string.Join(", ", keyPressActions.Keys);
+
+
 		private void BehaviourEnabledCheck() {
 			this.enabled = keyPressActions?.Count > 0;
 		}
@@ -152,17 +186,21 @@ namespace Damntry.UtilsUnity.Components {
 
 		private class KeyPressData {
 
-			public KeyPressData(Action action, int cooldownMillis) {
+			private readonly double cooldownSeconds;
+
+			private double lastKeyPressTime;
+
+			public KeyPressData(Action action, KeyPressAction keyAction, int cooldownMillis) {
 				this.Action = action; 
-				this.cooldownSeconds = cooldownMillis / 1000d; 
+				this.cooldownSeconds = cooldownSeconds > 0 ? cooldownMillis / 1000d : -1; 
 				this.lastKeyPressTime = double.MinValue;
+				this.KeyAction = keyAction;
 			}
 
 			internal Action Action { get; private set; }
 
-			private double cooldownSeconds;
+			internal KeyPressAction KeyAction { get; private set; }
 
-			private double lastKeyPressTime;
 
 
 			internal bool IsNotInCooldown() {
