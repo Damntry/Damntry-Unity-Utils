@@ -17,7 +17,7 @@ namespace Damntry.UtilsUnity.Timers {
 		/// <summary>How many calls are made to FixedUpdate in a second.</summary>
 		private static int fixedUpdateCycleMax;
 
-		public static (float fixedDeltaTime, int fixedUpdateCycleMax) GetFixedTimeCachedValues() {
+		public static FixedTimes GetFixedTimeCachedValues() {
 			if (unitySW == null || unitySW.ElapsedSecondsPrecise > 1) {
 				unitySW ??= UnityTimeStopwatch.StartNew(UnityTimeStopwatch.TimeType.FixedTime);
 
@@ -25,8 +25,11 @@ namespace Damntry.UtilsUnity.Timers {
 				fixedUpdateCycleMax = (int)Math.Round(1 / fixedDeltaTime);
 			}
 
-			return (fixedDeltaTime, fixedUpdateCycleMax);
+			return new (fixedDeltaTime, fixedUpdateCycleMax);
 		}
 
 	}
+
+	public record struct FixedTimes(float fixedDeltaTime, int fixedUpdateCycleMax);
+
 }

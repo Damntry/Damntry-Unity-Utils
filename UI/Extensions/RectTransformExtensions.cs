@@ -46,7 +46,7 @@ namespace Damntry.UtilsUnity.UI.Extensions {
 	}
 
 	public static class RectTransformExtensions {
-		public static void SetAnchor(this RectTransform source, AnchorPresets alignment, int offsetX = 0, int offsetY = 0) {
+		public static void SetAnchor(this RectTransform source, AnchorPresets alignment, float offsetX = 0, float offsetY = 0) {
 			source.anchoredPosition = new Vector3(offsetX, offsetY, 0);
 
 			switch (alignment) {

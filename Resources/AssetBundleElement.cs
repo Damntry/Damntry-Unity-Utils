@@ -23,15 +23,15 @@ namespace Damntry.UtilsUnity.Resources {
 		private AssetBundle loadedBundle;
 
 
-		public AssetBundleElement(Type assemblyType, string assetName) {
+		public AssetBundleElement(Type assemblyType, string assetRelativeFilePath) {
 			if (assemblyType == null) {
 				throw new ArgumentNullException(nameof(assemblyType));
 			}
-			if (string.IsNullOrEmpty(assetName)) {
-				throw new ArgumentNullException($"The parameter {nameof(assetName)} cant be null or empty.");
+			if (string.IsNullOrEmpty(assetRelativeFilePath)) {
+				throw new ArgumentNullException($"The parameter {nameof(assetRelativeFilePath)} cant be null or empty.");
 			}
 
-			assetBundlePath = AssemblyUtils.GetCombinedPathFromAssemblyFolder(assemblyType, assetName);
+			assetBundlePath = AssemblyUtils.GetCombinedPathFromAssemblyFolder(assemblyType, assetRelativeFilePath);
 			if (!File.Exists(assetBundlePath)) {
 				throw new FileNotFoundException(null, assetBundlePath);
 			}
@@ -62,12 +62,12 @@ namespace Damntry.UtilsUnity.Resources {
 					if (loadedBundle == null) {
 						throw new LoadBundleFileException(assetBundlePath);
 					}
-					TimeLogger.Logger.LogTimeDebug($"Bundle loaded successfully from {assetBundlePath}"
+					TimeLogger.Logger.LogDebug($"Bundle loaded successfully from {assetBundlePath}"
 						, LogCategories.Loading);
 
 					bundleCacheStorage.Add(assetBundlePath, loadedBundle);
 				} else {
-					TimeLogger.Logger.LogTimeDebug($"Bundle loaded successfully from storage cache.", LogCategories.Loading);
+					TimeLogger.Logger.LogDebug($"Bundle loaded successfully from storage cache.", LogCategories.Loading);
 				}
 			}
 			return true;
@@ -151,7 +151,7 @@ namespace Damntry.UtilsUnity.Resources {
 				return false;
 			}
 			if (unityObject is not T) {
-				TimeLogger.Logger.LogTimeError($"The object at {bundleInternalUnityPath} " +
+				TimeLogger.Logger.LogError($"The object at {bundleInternalUnityPath} " +
 					$"is not a {typeof(T).Name} type.", LogCategories.Loading);
 				return false;
 			}
@@ -175,7 +175,7 @@ namespace Damntry.UtilsUnity.Resources {
 
 			loadedObject = loadedBundle.LoadAsset<T>(bundleInternalUnityPath);
 			if (loadedObject == null) {
-				TimeLogger.Logger.LogTimeDebug($"Asset loaded with path " +
+				TimeLogger.Logger.LogDebug($"Asset loaded with path " +
 					$"\"{bundleInternalUnityPath}\" not found.", LogCategories.Loading);
 				return false;
 			}
@@ -185,7 +185,7 @@ namespace Damntry.UtilsUnity.Resources {
 
 		public void UnloadBundle() {
 			if (loadedBundle == null) {
-				TimeLogger.Logger.LogTimeDebug($"No loaded bundle was " +
+				TimeLogger.Logger.LogDebug($"No loaded bundle was " +
 					$"found while trying to unload.", LogCategories.Loading);
 				return;
 			}
@@ -194,7 +194,7 @@ namespace Damntry.UtilsUnity.Resources {
 			bundleCacheStorage.Remove(assetBundlePath);
 
 
-			TimeLogger.Logger.LogTimeDebug($"Asset bundle at {assetBundlePath} " +
+			TimeLogger.Logger.LogDebug($"Asset bundle at {assetBundlePath} " +
 				$"unloaded successfully.", LogCategories.Loading);
 		}
 	}

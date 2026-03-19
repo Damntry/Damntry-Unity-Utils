@@ -33,28 +33,28 @@ namespace Damntry.UtilsUnity.Timers {
 		}
 
 
-		/// <summary>Gets the total elapsed time measured by the current instance, in milliseconds.</summary>
+		/// <summary>Gets the total elapsed time measured by the current Instance, in milliseconds.</summary>
 		public long ElapsedMilliseconds {
 			get {
 				return (long)GetElapsedSeconds(false) * 1000;
 			}
 		}
 
-		/// <summary>Gets the total elapsed time measured by the current instance, in seconds.</summary>
+		/// <summary>Gets the total elapsed time measured by the current Instance, in seconds.</summary>
 		public long ElapsedSeconds {
 			get {
 				return (long)GetElapsedSeconds(false);
 			}
 		}
 
-		/// <summary>Gets the total elapsed time measured by the current instance, in milliseconds.</summary>
+		/// <summary>Gets the total elapsed time measured by the current Instance, in milliseconds.</summary>
 		public double ElapsedMillisecondsPrecise {
 			get {
 				return GetElapsedSeconds(true) * 1000;
 			}
 		}
 
-		/// <summary>Gets the total elapsed time measured by the current instance, in seconds.</summary>
+		/// <summary>Gets the total elapsed time measured by the current Instance, in seconds.</summary>
 		public double ElapsedSecondsPrecise {
 			get {
 				return GetElapsedSeconds(true);
@@ -64,7 +64,7 @@ namespace Damntry.UtilsUnity.Timers {
 
 		static UnityTimeStopwatch() { }
 
-		/// <summary>Initializes a new instance of this class.</summary>
+		/// <summary>Initializes a new Instance of this class.</summary>
 		public UnityTimeStopwatch() {
 			this.timeType = TimeType.Time;
 			Reset();
